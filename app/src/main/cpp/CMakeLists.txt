@@ -5,6 +5,10 @@ project("whisper-android")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set linker flags for 16KB page size compatibility
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
+
 # Find required libraries
 find_library(log-lib log)
 find_library(android-lib android)
@@ -52,6 +56,12 @@ target_include_directories(whisper-jni PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/whisper.cpp/include
     ${CMAKE_CURRENT_SOURCE_DIR}/whisper.cpp/ggml/include
     ${CMAKE_CURRENT_SOURCE_DIR}/whisper.cpp/ggml/src
+)
+
+# Set target-specific linker flags for 16KB page size compatibility
+target_link_options(whisper-jni PRIVATE
+    -Wl,-z,max-page-size=16384
+    -Wl,-z,common-page-size=16384
 )
 
 target_link_libraries(whisper-jni
