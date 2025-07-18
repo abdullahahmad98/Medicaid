@@ -1,12 +1,15 @@
 package com.example.medicaid.ui
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.medicaid.data.AudioPlaybackService
 import com.example.medicaid.data.AudioRecording
 import com.example.medicaid.data.AudioRecordingRepository
 import com.example.medicaid.data.AudioRecordingService
 import com.example.medicaid.data.WhisperTranscriptionService
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +21,12 @@ data class AudioRecordingUiState(
     val isWhisperReady: Boolean = false,
     val transcribingRecordingId: String? = null,
     val recordingError: String? = null,
-    val transcriptionError: String? = null
+    val transcriptionError: String? = null,
+    val playingRecordingId: String? = null,
+    val isPlaying: Boolean = false,
+    val isPaused: Boolean = false,
+    val currentPosition: Int = 0,
+    val duration: Int = 0
 )
 
 class AudioRecordingViewModel(application: Application) : AndroidViewModel(application) {
@@ -26,6 +34,7 @@ class AudioRecordingViewModel(application: Application) : AndroidViewModel(appli
     private val repository = AudioRecordingRepository(application)
     private val audioService = AudioRecordingService(application)
     private val whisperService = WhisperTranscriptionService(application)
+    private val playbackService = AudioPlaybackService(application)
 
     private val _uiState = MutableStateFlow(AudioRecordingUiState())
     val uiState: StateFlow<AudioRecordingUiState> = _uiState.asStateFlow()
@@ -189,8 +198,116 @@ class AudioRecordingViewModel(application: Application) : AndroidViewModel(appli
         return audioService.getRecordingDuration()
     }
 
+    fun playRecording(recording: AudioRecording) {
+        viewModelScope.launch {
+            try {
+                Log.d("AudioViewModel", "Play button clicked for recording: ${recording.fileName}")
+                Log.d("AudioViewModel", "Recording file path: ${recording.filePath}")
+
+                // Stop any currently playing audio
+                if (_uiState.value.isPlaying || _uiState.value.isPaused) {
+                    Log.d("AudioViewModel", "Stopping current playback")
+                    stopPlayback()
+                }
+
+                val success = playbackService.playAudio(recording.filePath, recording.id)
+                Log.d("AudioViewModel", "Playback service returned: $success")
+
+                if (success) {
+                    // Give MediaPlayer a moment to get the duration
+                    delay(100)
+                    val duration = playbackService.getDuration()
+                    Log.d("AudioViewModel", "Audio duration: ${duration}ms")
+
+                    _uiState.value = _uiState.value.copy(
+                        playingRecordingId = recording.id,
+                        isPlaying = true,
+                        isPaused = false,
+                        duration = duration
+                    )
+
+                    Log.d("AudioViewModel", "UI state updated - isPlaying: ${_uiState.value.isPlaying}")
+
+                    // Start position tracking
+                    startPositionTracking()
+                } else {
+                    Log.e("AudioViewModel", "Failed to start playback")
+                }
+            } catch (e: Exception) {
+                Log.e("AudioViewModel", "Exception in playRecording: ${e.message}", e)
+                _uiState.value = _uiState.value.copy(
+                    recordingError = "Failed to play audio: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun pausePlayback() {
+        playbackService.pausePlayback()
+        _uiState.value = _uiState.value.copy(
+            isPlaying = false,
+            isPaused = true
+        )
+    }
+
+    fun resumePlayback() {
+        playbackService.resumePlayback()
+        _uiState.value = _uiState.value.copy(
+            isPlaying = true,
+            isPaused = false
+        )
+        startPositionTracking()
+    }
+
+    fun stopPlayback() {
+        playbackService.stopPlayback()
+        _uiState.value = _uiState.value.copy(
+            playingRecordingId = null,
+            isPlaying = false,
+            isPaused = false,
+            currentPosition = 0,
+            duration = 0
+        )
+    }
+
+    fun seekTo(position: Int) {
+        playbackService.seekTo(position)
+        _uiState.value = _uiState.value.copy(
+            currentPosition = position
+        )
+    }
+
+    private fun startPositionTracking() {
+        viewModelScope.launch {
+            while (_uiState.value.isPlaying) {
+                val currentPosition = playbackService.getCurrentPosition()
+                val duration = playbackService.getDuration()
+
+                _uiState.value = _uiState.value.copy(
+                    currentPosition = currentPosition,
+                    duration = duration
+                )
+
+                // Check if playback completed
+                if (!playbackService.isPlaying() && !playbackService.isPaused()) {
+                    _uiState.value = _uiState.value.copy(
+                        playingRecordingId = null,
+                        isPlaying = false,
+                        isPaused = false,
+                        currentPosition = 0,
+                        duration = 0
+                    )
+                    break
+                }
+
+                delay(200) // Update every 200ms for better performance
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         whisperService.cleanup()
+        playbackService.release()
     }
 }

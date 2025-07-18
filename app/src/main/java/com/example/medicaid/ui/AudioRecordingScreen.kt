@@ -147,7 +147,17 @@ fun AudioRecordingScreen(
                     isWhisperReady = uiState.isWhisperReady,
                     onTranscribe = viewModel::transcribeRecording,
                     onDelete = viewModel::deleteRecording,
-                    onUpdateTranscript = viewModel::updateTranscript
+                    onUpdateTranscript = viewModel::updateTranscript,
+                    // Playback parameters
+                    isPlaying = uiState.playingRecordingId == recording.id && uiState.isPlaying,
+                    isPaused = uiState.playingRecordingId == recording.id && uiState.isPaused,
+                    currentPosition = if (uiState.playingRecordingId == recording.id) uiState.currentPosition else 0,
+                    duration = if (uiState.playingRecordingId == recording.id) uiState.duration else 0,
+                    onPlay = viewModel::playRecording,
+                    onPause = viewModel::pausePlayback,
+                    onResume = viewModel::resumePlayback,
+                    onStop = viewModel::stopPlayback,
+                    onSeek = viewModel::seekTo
                 )
             }
         }

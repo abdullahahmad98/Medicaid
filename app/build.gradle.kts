@@ -79,4 +79,8 @@ dependencies {
 
     // Material Icons Extended
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
+    // Swipe-to-dismiss dependencies
+    implementation("androidx.compose.material:material:1.8.3")
+    implementation("androidx.compose.foundation:foundation:1.8.3")
 }

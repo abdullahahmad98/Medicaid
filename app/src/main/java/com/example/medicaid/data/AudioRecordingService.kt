@@ -25,7 +25,7 @@ class AudioRecordingService(private val context: Context) {
             Log.d(TAG, "Starting audio recording")
 
             // Create unique file for recording
-            recordingFile = repository.createUniqueAudioFile("wav")
+            recordingFile = repository.createUniqueAudioFile("m4a")
 
             // Initialize MediaRecorder
             mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -35,11 +35,14 @@ class AudioRecordingService(private val context: Context) {
                 MediaRecorder()
             }.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
-                setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
                 setOutputFile(recordingFile?.absolutePath)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-                setAudioSamplingRate(16000) // 16kHz for Whisper compatibility
-                setAudioEncodingBitRate(64000)
+
+                // Set audio parameters after encoder
+                setAudioSamplingRate(44100) // High quality audio
+                setAudioEncodingBitRate(128000) // 128kbps for good quality
+                setAudioChannels(1) // Mono for speech
 
                 prepare()
                 start()
