@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.medicaid.data.AudioRecording
+import com.example.medicaid.ui.components.ModelSelectionDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -53,12 +54,39 @@ fun AudioRecordingScreen(
             .padding(16.dp)
     ) {
         // Header
-        Text(
-            text = "Audio Recorder & Transcriber",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Audio Recorder & Transcriber",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                uiState.currentModel?.let { model ->
+                    Text(
+                        text = "Model: ${model.displayName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = viewModel::showModelSelection,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Model Settings",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
         // Whisper initialization status
         if (uiState.isInitializingWhisper) {
@@ -160,6 +188,19 @@ fun AudioRecordingScreen(
                     onSeek = viewModel::seekTo
                 )
             }
+        }
+
+        // Model Selection Dialog
+        if (uiState.showModelSelection) {
+            ModelSelectionDialog(
+                models = uiState.availableModels,
+                downloadProgress = uiState.modelDownloadProgress,
+                currentModel = uiState.currentModel,
+                onModelSelected = viewModel::selectModel,
+                onDownloadModel = viewModel::downloadModel,
+                onDeleteModel = viewModel::deleteModel,
+                onDismiss = viewModel::hideModelSelection
+            )
         }
     }
 }

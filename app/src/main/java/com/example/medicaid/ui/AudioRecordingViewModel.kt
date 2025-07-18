@@ -9,6 +9,8 @@ import com.example.medicaid.data.AudioRecording
 import com.example.medicaid.data.AudioRecordingRepository
 import com.example.medicaid.data.AudioRecordingService
 import com.example.medicaid.data.WhisperTranscriptionService
+import com.example.medicaid.data.WhisperModel
+import com.example.medicaid.data.ModelDownloadProgress
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +28,11 @@ data class AudioRecordingUiState(
     val isPlaying: Boolean = false,
     val isPaused: Boolean = false,
     val currentPosition: Int = 0,
-    val duration: Int = 0
+    val duration: Int = 0,
+    val currentModel: WhisperModel? = null,
+    val availableModels: List<WhisperModel> = WhisperModel.availableModels,
+    val modelDownloadProgress: Map<String, ModelDownloadProgress> = emptyMap(),
+    val showModelSelection: Boolean = false
 )
 
 class AudioRecordingViewModel(application: Application) : AndroidViewModel(application) {
@@ -45,6 +51,8 @@ class AudioRecordingViewModel(application: Application) : AndroidViewModel(appli
     init {
         initializeWhisper()
         loadRecordings()
+        observeModelDownloadProgress()
+        loadCurrentModel()
     }
 
     private fun initializeWhisper() {
@@ -70,6 +78,21 @@ class AudioRecordingViewModel(application: Application) : AndroidViewModel(appli
     private fun loadRecordings() {
         viewModelScope.launch {
             _recordings.value = repository.getAllRecordings()
+        }
+    }
+
+    private fun loadCurrentModel() {
+        viewModelScope.launch {
+            val currentModel = whisperService.getCurrentModel()
+            _uiState.value = _uiState.value.copy(currentModel = currentModel)
+        }
+    }
+
+    private fun observeModelDownloadProgress() {
+        viewModelScope.launch {
+            whisperService.getModelDownloadService().downloadProgress.collect { progress ->
+                _uiState.value = _uiState.value.copy(modelDownloadProgress = progress)
+            }
         }
     }
 
@@ -303,6 +326,83 @@ class AudioRecordingViewModel(application: Application) : AndroidViewModel(appli
                 delay(200) // Update every 200ms for better performance
             }
         }
+    }
+
+    // Model Management Functions
+    fun showModelSelection() {
+        _uiState.value = _uiState.value.copy(showModelSelection = true)
+    }
+
+    fun hideModelSelection() {
+        _uiState.value = _uiState.value.copy(showModelSelection = false)
+    }
+
+    fun downloadModel(model: WhisperModel) {
+        viewModelScope.launch {
+            try {
+                val success = whisperService.getModelDownloadService().downloadModel(model)
+                if (success) {
+                    Log.i("AudioViewModel", "Model ${model.name} downloaded successfully")
+                } else {
+                    Log.e("AudioViewModel", "Failed to download model ${model.name}")
+                }
+            } catch (e: Exception) {
+                Log.e("AudioViewModel", "Error downloading model ${model.name}", e)
+            }
+        }
+    }
+
+    fun selectModel(model: WhisperModel) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isInitializingWhisper = true)
+
+                val success = whisperService.switchModel(model.name)
+                if (success) {
+                    _uiState.value = _uiState.value.copy(
+                        currentModel = model,
+                        isInitializingWhisper = false,
+                        isWhisperReady = true,
+                        showModelSelection = false
+                    )
+                    Log.i("AudioViewModel", "Successfully switched to model: ${model.name}")
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isInitializingWhisper = false,
+                        transcriptionError = "Failed to switch to model: ${model.name}"
+                    )
+                    Log.e("AudioViewModel", "Failed to switch to model: ${model.name}")
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isInitializingWhisper = false,
+                    transcriptionError = "Error switching model: ${e.message}"
+                )
+                Log.e("AudioViewModel", "Error switching model", e)
+            }
+        }
+    }
+
+    fun deleteModel(model: WhisperModel) {
+        viewModelScope.launch {
+            try {
+                val success = whisperService.getModelDownloadService().deleteModel(model)
+                if (success) {
+                    Log.i("AudioViewModel", "Model ${model.name} deleted successfully")
+                } else {
+                    Log.e("AudioViewModel", "Failed to delete model ${model.name}")
+                }
+            } catch (e: Exception) {
+                Log.e("AudioViewModel", "Error deleting model ${model.name}", e)
+            }
+        }
+    }
+
+    fun clearErrors() {
+        _uiState.value = _uiState.value.copy(
+            recordingError = null,
+            transcriptionError = null
+        )
     }
 
     override fun onCleared() {

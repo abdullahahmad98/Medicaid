@@ -20,6 +20,13 @@ android {
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
+
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+                arguments += "-DANDROID_STL=c++_shared"
+            }
+        }
     }
 
     buildTypes {
@@ -40,6 +47,13 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 }
 
@@ -83,4 +97,14 @@ dependencies {
     // Swipe-to-dismiss dependencies
     implementation("androidx.compose.material:material:1.8.3")
     implementation("androidx.compose.foundation:foundation:1.8.3")
+
+    // HTTP client for model downloads
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Preferences DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Work Manager for background downloads
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 }

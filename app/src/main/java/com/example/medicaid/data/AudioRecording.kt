@@ -15,5 +15,6 @@ data class AudioRecording(
 data class TranscriptionResult(
     val text: String,
     val confidence: Float,
-    val processingTime: Long
+    val processingTime: Long,
+    val modelUsed: String = "unknown"
 )
