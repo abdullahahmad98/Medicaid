@@ -115,7 +115,7 @@ class AudioProcessor(private val context: Context) {
         return try {
             val retriever = MediaMetadataRetriever()
             retriever.setDataSource(audioFilePath)
-            val sampleRateStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_AUDIO_SAMPLE_RATE)
+            val sampleRateStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_SAMPLERATE)
             retriever.release()
             sampleRateStr?.toInt() ?: WHISPER_SAMPLE_RATE
         } catch (e: Exception) {
