@@ -16,6 +16,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
     }
 
     buildTypes {
@@ -56,4 +60,23 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // ViewModel and Navigation
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
+    implementation("androidx.navigation:navigation-compose:2.9.2")
+
+    // Permissions
+    implementation("com.google.accompanist:accompanist-permissions:0.37.3")
+
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+
+    // JSON parsing
+    implementation("com.google.code.gson:gson:2.13.1")
+
+    // File operations
+    implementation("androidx.documentfile:documentfile:1.1.0")
+
+    // Material Icons Extended
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
 }
